@@ -1,14 +1,14 @@
 use super::Queue;
 
-impl<T> Queue<T> {
-    pub fn new(capacity: usize) -> Self {
+impl Queue {
+    pub fn new(capacity: usize, qq: Vec<u32>) -> Self {
         Queue {
             capacity,
-            items: Vec::with_capacity(capacity),
+            items: qq,
         }
     }
 
-    pub fn en_q(&mut self, item: T) -> Result<(), ()> {
+    pub fn en_q(&mut self, item: u32) -> Result<(), ()> {
         if self.is_full() {
             return Err(());
         }
@@ -17,7 +17,7 @@ impl<T> Queue<T> {
         Ok(())
     }
 
-    pub fn de_q(&mut self) -> Option<T> {
+    pub fn de_q(&mut self) -> Option<u32> {
         if self.is_empty() {
             return None;
         }

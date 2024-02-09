@@ -1,6 +1,8 @@
 mod implementation;
 
-pub struct Queue<T> {
+pub struct Queue {
     capacity: usize,
-    items: Vec<T>,
+    items: Vec<u32>,
 }
+
+unsafe impl Send for Queue {}
