@@ -1,13 +1,15 @@
-use crate::queue::Queue;
-use std::sync::{Arc, Mutex, MutexGuard};
-use std::thread;
+use crate::queue::{Queue, Submittable};
+use std::{
+    sync::{Arc, Mutex},
+    thread, time,
+};
 
 use super::RThreadPool;
 
 impl RThreadPool {
     pub fn new(pool_capacity: usize) -> Self {
-        let qq = Vec::with_capacity(pool_capacity);
-        let queue = Arc::new(Mutex::new(Queue::new(pool_capacity, qq)));
+        let qq = vec![];
+        let queue = Queue::new(qq);
 
         RThreadPool {
             pool_capacity,
@@ -15,28 +17,32 @@ impl RThreadPool {
         }
     }
 
-    pub fn submit(&self, element: u32) -> () {
-        let mut guard: MutexGuard<Queue> = self.queue.lock().unwrap();
-        match guard.en_q(element) {
-            Ok(_) => {
-                println!("submitted to queue")
-            }
-            Err(_) => {
-                println!("the queue is full")
-            }
+    pub fn submit(&mut self, element: Box<dyn Submittable>) -> () {
+        match self.queue.en_q(element) {
+            Ok(_) => {}
+            Err(_) => {}
         }
     }
 
-    pub fn execute<'a>(pool: &'a Box<RThreadPool>) -> () {
-        for _ in 1..pool.pool_capacity {
-            let qq = Arc::clone(&pool.queue);
-            thread::spawn(move || loop {
-                let mut que = qq.lock().unwrap();
-                match que.de_q() {
+    pub fn execute(pool: Box<RThreadPool>) -> () {
+        let len = pool.pool_capacity;
+        let mut_pool = Arc::new(Mutex::new(pool));
+        for _ in 0..len {
+            let i = Arc::clone(&mut_pool);
+            thread::spawn(move || 'listen: loop {
+                let mut j = i.lock().unwrap();
+
+                match j.queue.de_q() {
                     Some(val) => {
-                        println!("{}", val)
+                        if val.is_last() {
+                            println!("worker thread stopped");
+                            break 'listen;
+                        }
+                        val.run();
                     }
-                    None => {}
+                    None => {
+                        thread::sleep(time::Duration::from_millis(100));
+                    }
                 }
             });
         }

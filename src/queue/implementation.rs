@@ -1,36 +1,29 @@
-use super::Queue;
+use std::sync::Mutex;
+
+use super::{Queue, Submittable};
 
 impl Queue {
-    pub fn new(capacity: usize, qq: Vec<u32>) -> Self {
+    pub fn new(qq: Vec<Box<dyn Submittable>>) -> Self {
         Queue {
-            capacity,
-            items: qq,
+            items: Mutex::new(qq),
         }
     }
 
-    pub fn en_q(&mut self, item: u32) -> Result<(), ()> {
-        if self.is_full() {
-            return Err(());
-        }
-        self.items.push(item);
+    pub fn en_q(&mut self, item: Box<dyn Submittable>) -> Result<(), ()> {
+        let mut guard = self.items.lock().unwrap();
+        guard.push(item);
 
         Ok(())
     }
 
-    pub fn de_q(&mut self) -> Option<u32> {
-        if self.is_empty() {
+    pub fn de_q(&mut self) -> Option<Box<dyn Submittable>> {
+        let mut guard = self.items.lock().unwrap();
+
+        if guard.is_empty() {
             return None;
         }
-        let item = self.items.remove(0);
+        let item = guard.remove(0);
 
         Some(item)
-    }
-
-    fn is_full(&self) -> bool {
-        self.capacity == self.items.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.items.is_empty()
     }
 }

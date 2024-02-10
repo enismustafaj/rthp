@@ -1,8 +1,12 @@
+use std::sync::Mutex;
+
 mod implementation;
 
 pub struct Queue {
-    capacity: usize,
-    items: Vec<u32>,
+    items: Mutex<Vec<Box<dyn Submittable>>>,
 }
 
-unsafe impl Send for Queue {}
+pub trait Submittable: Send + Sync {
+    fn is_last(&self) -> bool;
+    fn run(&self) -> ();
+}
