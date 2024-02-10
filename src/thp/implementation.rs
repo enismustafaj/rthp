@@ -26,13 +26,13 @@ impl RThreadPool {
 
     pub fn execute(pool: Box<RThreadPool>) -> () {
         let len = pool.pool_capacity;
-        let mut_pool = Arc::new(Mutex::new(pool));
+        let mut_pool = Arc::new(Mutex::new(pool.queue));
         for _ in 0..len {
             let i = Arc::clone(&mut_pool);
             thread::spawn(move || 'listen: loop {
                 let mut j = i.lock().unwrap();
 
-                match j.queue.de_q() {
+                match j.de_q() {
                     Some(val) => {
                         if val.is_last() {
                             println!("worker thread stopped");
