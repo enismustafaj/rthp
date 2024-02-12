@@ -4,11 +4,13 @@ use thp::RThreadPool;
 mod queue;
 mod thp;
 
-struct Task {}
+struct Task {
+    name: String,
+}
 
 impl Task {
-    fn new() -> Self {
-        Self {}
+    fn new(name: String) -> Self {
+        Self { name }
     }
 }
 
@@ -17,36 +19,18 @@ impl Submittable for Task {
         false
     }
 
-    fn run(&self) -> () {
-        println!("task1");
-    }
-}
-
-struct TaskStop {}
-
-impl TaskStop {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Submittable for TaskStop {
-    fn is_last(&self) -> bool {
-        true
-    }
-
     fn run(&self) -> () {}
+
+    fn get_name(&self) -> &String {
+        &self.name
+    }
 }
 
 fn main() {
     let pool_capacity = 3;
-    let mut rthp = Box::new(RThreadPool::new(3));
-    rthp.submit(Box::new(Task::new()));
-    rthp.submit(Box::new(Task::new()));
+    let mut rthp = RThreadPool::new(pool_capacity);
 
-    for _ in 0..pool_capacity {
-        rthp.submit(Box::new(TaskStop::new()))
+    for i in 0..10 {
+        rthp.submit(Box::new(Task::new(String::from(format!("task {}", i)))));
     }
-
-    RThreadPool::execute(rthp);
 }
