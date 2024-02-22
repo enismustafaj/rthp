@@ -1,15 +1,26 @@
-use std::{io::{Read, Write}, net::TcpListener};
+use crate::request_executor::{request_data::RequestData, RequestExecutor};
+use log::{error, info};
+use std::{
+    collections::HashMap,
+    io::{Read, Write},
+    net::TcpListener,
+};
 
-pub struct RequestHandler;
+pub struct RequestHandler {
+    executors: RequestExecutor,
+}
 
 #[warn(unused_must_use)]
 impl RequestHandler {
     pub fn new() -> Self {
-        RequestHandler 
+        RequestHandler {
+            executors: RequestExecutor::new(HashMap::new()),
+        }
     }
 
-    pub fn handle(&self) -> () {
+    pub fn handle(&mut self) -> () {
         let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+        info!("Server listening to port 7878");
 
         for stream in listener.incoming() {
             match stream {
@@ -24,26 +35,36 @@ impl RequestHandler {
                                 Ok(_) => {
                                     let request_rows: Vec<&str> = buff.split("\n").collect();
                                     let req_info: Vec<&str> = request_rows[0].split(" ").collect();
+
                                     let request_method: &str = req_info[0];
                                     let request_path: &str = req_info[1];
-                                },
+
+                                    self.executors.execute_request(
+                                        RequestData::new(
+                                            String::from(request_method),
+                                            String::from(request_path),
+                                        ),
+                                        stream,
+                                    )
+                                }
                                 Err(_) => {
-                                    println!("Error parsing the request");
+                                    error!("Error parsing the request");
 
-                                    stream.write("HTTP/1.1 400 BAD REQUEST\r\n\r\n".as_bytes()).unwrap();
-                                },
+                                    stream
+                                        .write("HTTP/1.1 400 BAD REQUEST\r\n\r\n".as_bytes())
+                                        .unwrap();
+                                }
                             }
-
-                        },
+                        }
                         Err(_) => {
-                            panic!("Error")
-                        },
+                            error!("Error")
+                        }
                     }
-                },
+                }
 
                 Err(_) => {
-                    panic!("Error")
-                },
+                    error!("Error")
+                }
             }
         }
     }

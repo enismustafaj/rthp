@@ -1,11 +1,12 @@
+use super::RThreadPool;
 use crate::queue::{Queue, Submittable};
+use log::info;
+use rand::Rng;
 use std::{
     sync::{Arc, Mutex},
     thread::{self, JoinHandle},
     time,
 };
-
-use super::RThreadPool;
 
 impl RThreadPool {
     pub fn new(pool_capacity: usize) -> Self {
@@ -19,23 +20,23 @@ impl RThreadPool {
             let i = Arc::clone(&mut_pool);
             threads.push(thread::spawn(move || 'listen: {
                 let name: String = String::from(format!("{}", k));
-                println!("thread {} started", name);
+                info!("thread {} started", name);
                 loop {
-                    thread::sleep(time::Duration::from_millis(3000));
+                    let mut random_generator = rand::thread_rng();
+                    let waiting_time: u8 = random_generator.gen_range(1..255);
+                    thread::sleep(time::Duration::from_millis(waiting_time as u64));
+
                     let mut j = i.lock().unwrap();
 
                     match j.de_q() {
-                        Some(val) => {
+                        Some(mut val) => {
                             if val.is_last() {
-                                println!("worker {} thread stopped", name);
+                                info!("worker {} thread stopped", name);
                                 break 'listen;
                             }
-                            println!("thread {} executed {}", name, val.get_name());
                             val.run();
                         }
-                        None => {
-                            println!("queue is empty");
-                        }
+                        None => {}
                     }
                 }
             }));
@@ -71,9 +72,9 @@ impl Submittable for TaskStop {
         true
     }
 
-    fn run(&self) -> () {}
+    fn run(&mut self) -> () {}
 
-    fn get_name(&self) -> &String {
+    fn get_name(&self) -> String {
         todo!()
     }
 }

@@ -6,6 +6,6 @@ pub struct Queue {
 
 pub trait Submittable: Send + Sync {
     fn is_last(&self) -> bool;
-    fn run(&self) -> ();
-    fn get_name(&self) -> &String;
+    fn run(&mut self) -> ();
+    fn get_name(&self) -> String;
 }
