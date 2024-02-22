@@ -1,6 +1,6 @@
 use super::RThreadPool;
 use crate::queue::{Queue, Submittable};
-use log::info;
+use log::{debug, info};
 use rand::Rng;
 use std::{
     sync::{Arc, Mutex},
@@ -34,6 +34,8 @@ impl RThreadPool {
                                 info!("worker {} thread stopped", name);
                                 break 'listen;
                             }
+
+                            debug!("{}", val.get_name());
                             val.run();
                         }
                         None => {}

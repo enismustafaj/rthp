@@ -21,6 +21,7 @@ impl Submittable for RootExecutor {
         self.stream
             .write_all("HTTP/1.1 200 OK\r\n\r\n".as_bytes())
             .unwrap();
+        self.stream.flush().unwrap();
     }
 
     fn get_name(&self) -> String {

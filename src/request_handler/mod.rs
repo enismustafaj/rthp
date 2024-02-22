@@ -2,7 +2,7 @@ use crate::request_executor::{request_data::RequestData, RequestExecutor};
 use log::{error, info};
 use std::{
     collections::HashMap,
-    io::{Read, Write},
+    io::{prelude::*, BufReader, Write},
     net::TcpListener,
 };
 
@@ -25,39 +25,41 @@ impl RequestHandler {
         for stream in listener.incoming() {
             match stream {
                 Ok(mut stream) => {
-                    let mut buff: String = String::new();
-                    match stream.read_to_string(&mut buff) {
+                    let buf_reader = BufReader::new(&mut stream);
+                    let http_request: Vec<_> = buf_reader
+                        .lines()
+                        .map(|result| result.unwrap())
+                        .take_while(|line| !line.is_empty())
+                        .collect();
+
+                    let buff: String = http_request.join("\n");
+
+                    let mut headers = [httparse::EMPTY_HEADER; 64];
+                    let mut req = httparse::Request::new(&mut headers);
+
+                    match req.parse(buff.as_bytes()) {
                         Ok(_) => {
-                            let mut headers = [httparse::EMPTY_HEADER; 64];
-                            let mut req = httparse::Request::new(&mut headers);
+                            let request_rows: Vec<&str> = buff.split("\n").collect();
+                            let req_info: Vec<&str> = request_rows[0].split(" ").collect();
 
-                            match req.parse(buff.as_bytes()) {
-                                Ok(_) => {
-                                    let request_rows: Vec<&str> = buff.split("\n").collect();
-                                    let req_info: Vec<&str> = request_rows[0].split(" ").collect();
+                            let request_method: &str = req_info[0];
+                            let request_path: &str = req_info[1];
 
-                                    let request_method: &str = req_info[0];
-                                    let request_path: &str = req_info[1];
-
-                                    self.executors.execute_request(
-                                        RequestData::new(
-                                            String::from(request_method),
-                                            String::from(request_path),
-                                        ),
-                                        stream,
-                                    )
-                                }
-                                Err(_) => {
-                                    error!("Error parsing the request");
-
-                                    stream
-                                        .write("HTTP/1.1 400 BAD REQUEST\r\n\r\n".as_bytes())
-                                        .unwrap();
-                                }
-                            }
+                            self.executors.execute_request(
+                                RequestData::new(
+                                    String::from(request_method),
+                                    String::from(request_path),
+                                ),
+                                stream,
+                            )
                         }
                         Err(_) => {
-                            error!("Error")
+                            error!("Error parsing the request");
+
+                            stream
+                                .write("HTTP/1.1 400 BAD REQUEST\r\n\r\n".as_bytes())
+                                .unwrap();
+                            stream.flush().unwrap();
                         }
                     }
                 }
