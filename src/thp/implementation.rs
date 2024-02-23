@@ -85,6 +85,9 @@ impl Drop for RThreadPool {
     fn drop(&mut self) {
         for _ in 0..self.pool_capacity {
             self.submit(Box::new(TaskStop::new()));
+        }
+
+        for _ in 0..self.pool_capacity {
             if let Some(thread) = self.workers.pop() {
                 thread.join().unwrap();
             }
