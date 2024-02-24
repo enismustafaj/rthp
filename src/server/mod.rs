@@ -3,7 +3,7 @@ use log::{error, info};
 use std::{
     collections::HashMap,
     io::{prelude::*, BufReader, Write},
-    net::TcpListener,
+    net::{TcpListener, TcpStream},
 };
 
 pub struct RequestHandler {
@@ -18,6 +18,17 @@ impl RequestHandler {
         }
     }
 
+    fn get_request(&self, stream: &mut TcpStream) -> String {
+        let buf_reader = BufReader::new(stream);
+        let http_request: Vec<_> = buf_reader
+            .lines()
+            .map(|result| result.unwrap())
+            .take_while(|line| !line.is_empty())
+            .collect();
+
+        http_request.join("\n")
+    }
+
     pub fn handle(&mut self) -> () {
         let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
         info!("Server listening to port 7878");
@@ -25,18 +36,10 @@ impl RequestHandler {
         for stream in listener.incoming() {
             match stream {
                 Ok(mut stream) => {
-                    let buf_reader = BufReader::new(&mut stream);
-                    let http_request: Vec<_> = buf_reader
-                        .lines()
-                        .map(|result| result.unwrap())
-                        .take_while(|line| !line.is_empty())
-                        .collect();
-
-                    let buff: String = http_request.join("\n");
-
                     let mut headers = [httparse::EMPTY_HEADER; 64];
                     let mut req = httparse::Request::new(&mut headers);
 
+                    let buff = self.get_request(&mut stream);
                     match req.parse(buff.as_bytes()) {
                         Ok(_) => {
                             let request_rows: Vec<&str> = buff.split("\n").collect();

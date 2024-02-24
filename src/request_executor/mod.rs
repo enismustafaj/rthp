@@ -1,12 +1,10 @@
+use self::{controllers::root_controller::RootController, request_data::RequestData};
+use crate::{queue::Submittable, thp::RThreadPool};
+use log::warn;
+use std::fs;
 use std::{collections::HashMap, io::Write, net::TcpStream};
 
-use log::warn;
-
-use crate::{queue::Submittable, thp::RThreadPool};
-
-use self::{implementation::RootExecutor, request_data::RequestData};
-
-mod implementation;
+mod controllers;
 pub mod request_data;
 
 #[allow(dead_code)]
@@ -25,11 +23,20 @@ impl RequestExecutor {
 
     pub fn execute_request(&mut self, data: RequestData, mut stream: TcpStream) {
         if data.get_method() == "GET" && data.get_path() == "/" {
-            let exec = RootExecutor::new(stream);
+            let exec = RootController::new(stream);
             self.pool.submit(Box::new(exec));
         } else {
             warn!("No patter for request was found");
-            stream.write_all("404".as_bytes()).unwrap();
+
+            match fs::read_to_string("./src/static/404.html") {
+                Ok(page) => {
+                    let mut init: String = String::from("HTTP/1.1 404 NOT FOUND\r\n\r\n");
+                    init.push_str(page.as_str());
+                    stream.write_all(init.as_bytes()).unwrap();
+                    stream.flush().unwrap();
+                }
+                Err(_) => todo!(),
+            }
         }
     }
 }
