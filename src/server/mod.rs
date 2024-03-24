@@ -1,4 +1,4 @@
-use crate::request_executor::{request_data::RequestData, RequestExecutor};
+use crate::request_executor::RequestExecutor;
 use log::{error, info};
 use std::{
     collections::HashMap,
@@ -6,15 +6,15 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-pub struct RequestHandler {
-    executors: RequestExecutor,
+pub struct Server {
+    executors: RequestExecutor
 }
 
 #[warn(unused_must_use)]
-impl RequestHandler {
-    pub fn new() -> Self {
-        RequestHandler {
-            executors: RequestExecutor::new(HashMap::new()),
+impl Server {
+    pub fn new(routes: HashMap<String, String>) -> Self {
+        Server {
+            executors: RequestExecutor::new(routes),
         }
     }
 
@@ -29,7 +29,7 @@ impl RequestHandler {
         http_request.join("\n")
     }
 
-    pub fn handle(&mut self) -> () {
+    pub fn handle_requests(&mut self) -> () {
         let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
         info!("Server listening to port 7878");
 
@@ -45,14 +45,10 @@ impl RequestHandler {
                             let request_rows: Vec<&str> = buff.split("\n").collect();
                             let req_info: Vec<&str> = request_rows[0].split(" ").collect();
 
-                            let request_method: &str = req_info[0];
                             let request_path: &str = req_info[1];
 
                             self.executors.execute_request(
-                                RequestData::new(
-                                    String::from(request_method),
-                                    String::from(request_path),
-                                ),
+                                request_path.into(),
                                 stream,
                             )
                         }

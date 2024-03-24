@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use env_logger::Env;
-use server::RequestHandler;
+use server::Server;
 
 mod queue;
 mod request_executor;
@@ -11,7 +13,16 @@ fn main() {
         .format_target(false)
         .init();
 
-    let mut handler: RequestHandler = RequestHandler::new();
+    let mut routes: HashMap<String, String> = HashMap::new();
+    compute_routes(&mut routes);
 
-    handler.handle();
+    let mut server: Server = Server::new(routes);
+
+    server.handle_requests();
 }
+
+fn compute_routes(routes: &mut HashMap<String, String>) -> () {
+    routes.insert("/".into(), "./src/static/index.html".into());
+}
+
+

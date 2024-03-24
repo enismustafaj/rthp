@@ -1,3 +1,3 @@
-# rthp
+# Static content server
 
-A simple implementation of a thread pool in Rust.
+A simple implementation of a multi threaded server serving static content pages.

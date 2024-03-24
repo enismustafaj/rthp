@@ -1,33 +1,36 @@
-use self::{controllers::root_controller::RootController, request_data::RequestData};
-use crate::{queue::Submittable, thp::RThreadPool};
-use log::warn;
+use crate::thp::RThreadPool;
 use std::fs;
 use std::{collections::HashMap, io::Write, net::TcpStream};
 
-mod controllers;
-pub mod request_data;
+use self::controller::Controller;
+
+mod controller;
 
 #[allow(dead_code)]
 pub struct RequestExecutor {
-    register: HashMap<RequestData, Box<dyn Submittable>>,
+    register: HashMap<String, String>,
     pool: RThreadPool,
 }
 
 impl RequestExecutor {
-    pub fn new(register: HashMap<RequestData, Box<dyn Submittable>>) -> Self {
+    pub fn new(register: HashMap<String, String>) -> Self {
         RequestExecutor {
             register,
             pool: RThreadPool::new(3),
         }
     }
 
-    pub fn execute_request(&mut self, data: RequestData, mut stream: TcpStream) {
-        if data.get_method() == "GET" && data.get_path() == "/" {
-            let exec = RootController::new(stream);
-            self.pool.submit(Box::new(exec));
-        } else {
-            warn!("No patter for request was found");
+    pub fn execute_request(&mut self, path: String, mut stream: TcpStream) {
 
+        if !self.register.contains_key(&path) {
+            self.return404(&mut stream);
+        }
+        let exec = Controller::new(stream, self.register.get(&path).unwrap().to_owned());
+        self.pool.submit(Box::new(exec));
+        
+    }
+
+    fn return404(&self, stream: &mut TcpStream) -> () {
             match fs::read_to_string("./src/static/404.html") {
                 Ok(page) => {
                     let mut init: String = String::from("HTTP/1.1 404 NOT FOUND\r\n\r\n");
@@ -37,6 +40,5 @@ impl RequestExecutor {
                 }
                 Err(_) => todo!(),
             }
-        }
     }
 }
